@@ -8,7 +8,8 @@ Todo:
 * [ ] activate to return {success, data, error}, prob always do this on all internal too
 * [ ] maybe add multi account logic?
 * [ ] Im able to call refresh token, though we could not do this/why msal used hidden iframe and is unuasable with COEP/COOP headers, check out this more..
-
+* [ ] make esm build of file
+* [ ] option for setting storage location, localstorage/session storage, local storage is nicer SSO
 
 Ref:
 https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow
