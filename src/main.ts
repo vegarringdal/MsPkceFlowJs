@@ -35,8 +35,13 @@ async function main() {
   }
 
   // just to show what we have
+  // todo refactor this a little
+  // really just need one that calls update if needed
+  // should be able to send in scope, promt/switch user etc
   const accessTokenString = msPkceFlowJs.getAccessToken();
   const newToken = await msPkceFlowJs.updateToken();
+
+
 
 
   console.log("tokenResult:", tokenResult);
