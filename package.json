@@ -5,7 +5,7 @@
   "main": "./dist/main.js",
   "type": "module",
   "scripts": {
-    "build": "tsc && vite build --outDir docs",
+    "build": "tsc && vite build --outDir docs --base ./",
     "start": "vite --port 8080",
     "preview": "vite preview"
   },

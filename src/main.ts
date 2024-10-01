@@ -3,15 +3,19 @@ import { MsPkceFlowJs } from "./MsPkceFlowJs.ts";
 async function main() {
 
 
+  let redirect_uri = "http://localhost:8080"
+  if(location.host === "vegarringdal.github.io"){
+    redirect_uri = 'vegarringdal.github.io/MsPkceFlowJs/'
+  }
 
-  
+
   const msPkceFlowJs = new MsPkceFlowJs(
     {
       // dummy app registration
       client_id: "2bca3844-d481-4fd0-a2fe-53a237ec28ec",
       tenant_id: "0bfdc7b6-077d-4379-9617-c56c6453235b",
       scope: "api://2bca3844-d481-4fd0-a2fe-53a237ec28ec/api",
-      redirect_uri: "http://localhost:8080",
+      redirect_uri
     },
 
     // callback
