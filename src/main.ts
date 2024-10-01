@@ -5,7 +5,7 @@ async function main() {
 
   let redirect_uri = "http://localhost:8080"
   if(location.host === "vegarringdal.github.io"){
-    redirect_uri = 'vegarringdal.github.io/MsPkceFlowJs/'
+    redirect_uri = 'https://vegarringdal.github.io/MsPkceFlowJs/'
   }
 
 
