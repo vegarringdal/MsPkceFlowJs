@@ -4,29 +4,33 @@
  * https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow
  */
 export class MsPkceFlowJs {
-  private authConfig: AuthConfig;
-  private stateLocalStorageKey = "__key";
-  private verifierLocalStorageKey = "__verifier";
-  private codeLocalStorageKey = "__code";
-  private lasturlLocalStorageKey = "__lastUrl";
-  private useOldStateLocalStorageKey = "__useOldState";
-  private accountLocalStorageKey = "__account";
-  private currentAccount: TokenResult | null = null;
+  #authConfig: AuthConfig;
+  #stateLocalStorageKey = "__key";
+  #verifierLocalStorageKey = "__verifier";
+  #codeLocalStorageKey = "__code";
+  #lasturlLocalStorageKey = "__lastUrl";
+  #useOldStateLocalStorageKey = "__useOldState";
+  #accountLocalStorageKey = "__account";
+  #currentAccount: TokenResult | null = null;
   public useLog = false;
-  callback: (result: TokenResult) => void;
+  #callback: (result: TokenResult) => void;
 
   constructor(authConfig: AuthConfig, callback?: (result: TokenResult) => void) {
-    this.authConfig = authConfig;
-    this.currentAccount = null;
-    this.callback = callback || function(){};
+    this.#authConfig = authConfig;
+    this.#currentAccount = null;
+    this.#callback = callback || function(){};
+  }
+
+  public addEventLister(listener: (event: any)=>void | {handleEvent:(event: any)=> void}){
+   // todo 
   }
 
   public getAccessToken() {
-    return this.currentAccount?.access_token;
+    return this.#currentAccount?.access_token;
   }
 
   public async updateToken() {
-    const token = this.currentAccount?.refresh_token;
+    const token = this.#currentAccount?.refresh_token;
 
     if (token) {
       const [url, form] = this.#generateTokenRefreshUrl(token);
@@ -34,8 +38,8 @@ export class MsPkceFlowJs {
 
       if (response.ok) {
         const json = await response.json();
-        this.saveToken(json);
-        return this.currentAccount;
+        this.#saveToken(json);
+        return this.#currentAccount;
       }
     } else {
       throw "no refresh token available";
@@ -47,37 +51,37 @@ export class MsPkceFlowJs {
     let code = new URLSearchParams(hash).get("code");
     let state = new URLSearchParams(hash).get("state");
 
-    const oldState = sessionStorage.getItem(this.stateLocalStorageKey);
-    const oldVerifier = sessionStorage.getItem(this.verifierLocalStorageKey);
-    const useOldState = sessionStorage.getItem(this.useOldStateLocalStorageKey);
+    const oldState = sessionStorage.getItem(this.#stateLocalStorageKey);
+    const oldVerifier = sessionStorage.getItem(this.#verifierLocalStorageKey);
+    const useOldState = sessionStorage.getItem(this.#useOldStateLocalStorageKey);
 
     if (useOldState) {
       // browser reloaded..
       state = oldState;
-      code = sessionStorage.getItem(this.codeLocalStorageKey);
+      code = sessionStorage.getItem(this.#codeLocalStorageKey);
     }
 
     if (code && oldState && oldVerifier && oldState === state) {
-      const oldurl = sessionStorage.getItem(this.lasturlLocalStorageKey);
+      const oldurl = sessionStorage.getItem(this.#lasturlLocalStorageKey);
       if (oldurl) {
-        sessionStorage.removeItem(this.lasturlLocalStorageKey);
+        sessionStorage.removeItem(this.#lasturlLocalStorageKey);
         // need to save this since we will reload browser one more time..
-        sessionStorage.setItem(this.useOldStateLocalStorageKey, "TRUE");
-        sessionStorage.setItem(this.codeLocalStorageKey, code);
+        sessionStorage.setItem(this.#useOldStateLocalStorageKey, "TRUE");
+        sessionStorage.setItem(this.#codeLocalStorageKey, code);
 
         const urlObj = JSON.parse(oldurl);
         location.href = `${location.origin}${urlObj.pathname}${urlObj.search}${urlObj.hash}`;
         return;
       }
-      sessionStorage.removeItem(this.useOldStateLocalStorageKey);
+      sessionStorage.removeItem(this.#useOldStateLocalStorageKey);
 
-      const url = `https://login.microsoftonline.com/${this.authConfig.tenant_id}/oauth2/v2.0/token`;
+      const url = `https://login.microsoftonline.com/${this.#authConfig.tenant_id}/oauth2/v2.0/token`;
 
       const form = new FormData();
-      form.append("scope", this.authConfig.scope);
+      form.append("scope", this.#authConfig.scope);
       form.append("code", code);
-      form.append("client_id", this.authConfig.client_id);
-      form.append("redirect_uri", this.authConfig.redirect_uri);
+      form.append("client_id", this.#authConfig.client_id);
+      form.append("redirect_uri", this.#authConfig.redirect_uri);
       form.append("grant_type", "authorization_code");
       form.append("code_verifier", oldVerifier);
 
@@ -85,13 +89,13 @@ export class MsPkceFlowJs {
       const response = await fetch(url, { body: form, method: "POST" });
 
       //cleanup
-      sessionStorage.removeItem(this.verifierLocalStorageKey);
-      sessionStorage.removeItem(this.stateLocalStorageKey);
+      sessionStorage.removeItem(this.#verifierLocalStorageKey);
+      sessionStorage.removeItem(this.#stateLocalStorageKey);
 
       if (response.ok) {
         const json = await response.json();
 
-        this.saveToken(json);
+        this.#saveToken(json);
         await this.reSheduleRefresh();
 
         return json as TokenResult;
@@ -101,14 +105,14 @@ export class MsPkceFlowJs {
       }
     } else {
       if (oldVerifier && oldState) {
-        sessionStorage.removeItem(this.verifierLocalStorageKey);
-        sessionStorage.removeItem(this.stateLocalStorageKey);
-        sessionStorage.removeItem(this.useOldStateLocalStorageKey);
+        sessionStorage.removeItem(this.#verifierLocalStorageKey);
+        sessionStorage.removeItem(this.#stateLocalStorageKey);
+        sessionStorage.removeItem(this.#useOldStateLocalStorageKey);
 
         throw "auth failed";
       } else {
         sessionStorage.setItem(
-          this.lasturlLocalStorageKey,
+          this.#lasturlLocalStorageKey,
           JSON.stringify({
             pathname: location.pathname,
             search: location.search,
@@ -116,16 +120,16 @@ export class MsPkceFlowJs {
           })
         );
 
-        const account = sessionStorage.getItem(this.accountLocalStorageKey);
+        const account = sessionStorage.getItem(this.#accountLocalStorageKey);
         if (account) {
           // if we have account lets try and get token silently
 
-          this.currentAccount = JSON.parse(account) as TokenResult;
+          this.#currentAccount = JSON.parse(account) as TokenResult;
 
           await this.reSheduleRefresh();
 
           // might never get here..
-          return this.currentAccount;
+          return this.#currentAccount;
         } else {
           await this.#loginRedirect();
         }
@@ -140,12 +144,12 @@ export class MsPkceFlowJs {
   }
 
   private async reSheduleRefresh() {
-    if (!this.currentAccount) {
+    if (!this.#currentAccount) {
       await this.#loginRedirect();
       return;
     }
 
-    const expireDate = new Date(this.currentAccount.expire_isoString).getTime();
+    const expireDate = new Date(this.#currentAccount.expire_isoString).getTime();
     const currentDate = new Date().getTime();
 
     const expireMs = expireDate - currentDate;
@@ -168,7 +172,7 @@ export class MsPkceFlowJs {
     }
 
     //callback, since its still valid
-    this.callback(this.currentAccount);
+    this.#callback(this.#currentAccount);
 
     this.log(`scheduled refresh in ${expireMsMinusBuffer / 1000 / 60}`);
 
@@ -176,7 +180,7 @@ export class MsPkceFlowJs {
       await this.updateToken().catch(async () => {
         // maybe now what we want..
         sessionStorage.setItem(
-          this.lasturlLocalStorageKey,
+          this.#lasturlLocalStorageKey,
           JSON.stringify({
             pathname: location.pathname,
             search: location.search,
@@ -187,13 +191,13 @@ export class MsPkceFlowJs {
         return;
       });
 
-      if (this.currentAccount) {
-        this.callback(this.currentAccount);
+      if (this.#currentAccount) {
+        this.#callback(this.#currentAccount);
       }
     }, expireMsMinusBuffer);
   }
 
-  private saveToken(json: any) {
+  #saveToken(json: any) {
     if (json.access_token) {
       json.access_token_tokenDecoded = this.#parseJwt(json.access_token);
     }
@@ -204,9 +208,9 @@ export class MsPkceFlowJs {
 
     json.expire_localString = new Date(json.expire_isoString);
 
-    this.currentAccount = json;
+    this.#currentAccount = json;
 
-    sessionStorage.setItem(this.accountLocalStorageKey, JSON.stringify(json));
+    sessionStorage.setItem(this.#accountLocalStorageKey, JSON.stringify(json));
   }
 
   async #loginRedirect() {
@@ -279,12 +283,12 @@ export class MsPkceFlowJs {
   }
 
   #generateTokenRefreshUrl(token: string) {
-    const authUrl = `https://login.microsoftonline.com/${this.authConfig.tenant_id}/oauth2/v2.0/token`;
+    const authUrl = `https://login.microsoftonline.com/${this.#authConfig.tenant_id}/oauth2/v2.0/token`;
 
     const form = new FormData();
-    form.append("client_id", this.authConfig.client_id);
+    form.append("client_id", this.#authConfig.client_id);
     form.append("refresh_token", token);
-    form.append("scope", this.authConfig.scope);
+    form.append("scope", this.#authConfig.scope);
     form.append("grant_type", "refresh_token");
 
     return [authUrl, form] as [string, FormData];
@@ -294,19 +298,19 @@ export class MsPkceFlowJs {
     const PKCE = await this.#generatePKCE();
     const state = crypto.randomUUID();
 
-    sessionStorage.setItem(this.verifierLocalStorageKey, PKCE.verifier);
-    sessionStorage.setItem(this.stateLocalStorageKey, state);
+    sessionStorage.setItem(this.#verifierLocalStorageKey, PKCE.verifier);
+    sessionStorage.setItem(this.#stateLocalStorageKey, state);
 
-    const authUrl = `https://login.microsoftonline.com/${this.authConfig.tenant_id}/oauth2/v2.0/authorize`;
+    const authUrl = `https://login.microsoftonline.com/${this.#authConfig.tenant_id}/oauth2/v2.0/authorize`;
 
     const urlParam = new URLSearchParams();
-    urlParam.append("client_id", this.authConfig.client_id);
+    urlParam.append("client_id", this.#authConfig.client_id);
     urlParam.append("response_type", "code");
     urlParam.append("response_mode", "fragment");
-    urlParam.append("scope", this.authConfig.scope);
+    urlParam.append("scope", this.#authConfig.scope);
     urlParam.append("state", state);
     urlParam.append("code_challenge", PKCE.challenge);
-    urlParam.append("redirect_uri", this.authConfig.redirect_uri);
+    urlParam.append("redirect_uri", this.#authConfig.redirect_uri);
     urlParam.append("code_challenge_method", "S256");
 
     return authUrl + "?" + urlParam.toString();
